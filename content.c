@@ -19,75 +19,69 @@
 /* 10 MB is max size */
 #define MAX_CONTENT_SZ (1024*1024*10)
 
-char *
-error_resp(char *path, int *len)
-{
-	const char eresponse[] = "<html><head><title>ERROR</title></head><body><font face=\"sans-serif\"><center><h1>Error Occurs!</h1><p>Could not find content at <b>%s</b>.</p></font></center></body>";
-	char *resp;
-	int sz = strlen(eresponse) + strlen(path);
-	
-	resp = malloc(sz);
-	if (!resp) return NULL;
-	*len = sprintf(resp, eresponse, path);
-	return resp;
+char *error_resp(char *path, int *len) {
+  const char eresponse[] = "<html><head><title>ERROR</title></head><body><font face=\"sans-serif\"><center><h1>Error Occurs!</h1><p>Could not find content at <b>%s</b>.</p></font></center></body>";
+  char *resp;
+  int sz = strlen(eresponse) + strlen(path);
+
+  resp = malloc(sz);
+  if (!resp) return NULL;
+  *len = sprintf(resp, eresponse, path);
+  return resp;
 }
 
-int
-sanity_check(char *path)
-{ return (path[0] == '.' || path[0] == '/'); }
+int sanity_check(char *path) { 
+  return (path[0] == '.' || path[0] == '/'); 
+}
 
-char *
-content_get(char *path, int *content_len)
-{
-	char *resp;
-	int content_fd, amnt_read = 0;
-	struct stat s;
+char *content_get(char *path, int *content_len) {
+  char *resp;
+  int content_fd, amnt_read = 0;
+  struct stat s;
 
-#ifdef THINK_TIME
-	sleep(1);
-#endif
+  #ifdef THINK_TIME
+  sleep(1);
+  #endif
 
-	/* Bad path?  No file?  Too large? */
-        int r_stat = stat(path, &s);
-        printf("Current Path: %s\n", path);
-        printf("stat size: %d\n", s.st_size);
-	if (sanity_check(path) || 
-	    (r_stat)     ||
-	    (s.st_size > MAX_CONTENT_SZ)) {
-            printf("%d, %d, %d\n", sanity_check(path), stat(path, &s), s.st_size > MAX_CONTENT_SZ);
-            printf("sanity_check_error\n");
-            goto err;
-        }
+  /* Bad path?  No file?  Too large? */
+  int r_stat = stat(path, &s);
+  printf("Current Path: %s\n", path);
+  //printf("stat size: %d\n", s.st_size);
+  if (sanity_check(path) ||r_stat || (s.st_size > MAX_CONTENT_SZ)) {
+    printf("%d, %d, %d\n", sanity_check(path), stat(path, &s), s.st_size > MAX_CONTENT_SZ);
+    printf("sanity_check_error\n");
+    goto err;
+  }
 
-	content_fd = open(path, O_RDONLY);
-	if (content_fd < 0) {
-            printf("content_open_error\n");
-            goto err;
-        }
+  content_fd = open(path, O_RDONLY);
+  if (content_fd < 0) {
+    printf("content_open_error\n");
+    goto err;
+  }
 
-	resp = malloc(s.st_size);
-	if (!resp) {
-            printf("rest_malloc_error\n");
-            goto err_close;
-        }
+  resp = malloc(s.st_size);
+  if (!resp) {
+    printf("rest_malloc_error\n");
+    goto err_close;
+  }
 
-	while (amnt_read < s.st_size) {
-		int ret = read(content_fd, resp + amnt_read, 
-			       s.st_size - amnt_read);
+  while (amnt_read < s.st_size) {
+    int ret = read(content_fd, resp + amnt_read, s.st_size - amnt_read);
 
-		if (ret < 0) {
-                    printf("amnt_read_error\n");
-                    goto err_free;
-		}
-                amnt_read += ret;
-	}
-	*content_len = s.st_size;
+    if (ret < 0) {
+      printf("amnt_read_error\n");
+      goto err_free;
+    }
+    amnt_read += ret;
+  }
+  *content_len = s.st_size;
 
-	return resp;
+  return resp;
 err_free:
-	free(resp);
+  free(resp);
 err_close:
-	close(content_fd);
+  close(content_fd);
 err:
-	return error_resp(path, content_len);
+  return error_resp(path, content_len);
 }
+

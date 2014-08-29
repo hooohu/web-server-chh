@@ -24,45 +24,41 @@
 /* 
  * Create the file descriptor to accept on.  Return -1 otherwise.
  */
-int 
-server_create(short int port)
-{
-	int fd;
-	struct sockaddr_in server;
+int server_create(short int port) {
+  int fd;
+  struct sockaddr_in server;
 
-	if ((fd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("Establishing socket");
-		return -1;
-	}
+  if ((fd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+    perror("Establishing socket");
+    return -1;
+  }
 
-	server.sin_family      = AF_INET;
-	server.sin_port        = htons(port);
-	server.sin_addr.s_addr = htonl(INADDR_ANY);
-	if (bind(fd, (struct sockaddr *)&server, sizeof(server))) {
-		perror("binding receive socket");
-		return -1;
-	}
-	listen(fd, 10);
+  server.sin_family      = AF_INET;
+  server.sin_port        = htons(port);
+  server.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(fd, (struct sockaddr *)&server, sizeof(server))) {
+    perror("binding receive socket");
+    return -1;
+  }
+  listen(fd, 10);
 
-	return fd;
+  return fd;
 }
 
 /* 
  * Pass in the accept file descriptor returned from
  * server_create. Return a new file descriptor or -1 on error.
  */
-int 
-server_accept(int fd)
-{
-	struct sockaddr_in sai;
-	int new_fd;
-	unsigned int len = sizeof(sai);
+int server_accept(int fd) {
+  struct sockaddr_in sai;
+  int new_fd;
+  unsigned int len = sizeof(sai);
 
-	new_fd = accept(fd, (struct sockaddr *)&sai, &len);
-	if (-1 == new_fd) {
-		perror("accept");
-		return -1;
-	}
-	return new_fd;
+  new_fd = accept(fd, (struct sockaddr *)&sai, &len);
+  if (-1 == new_fd) {
+    perror("accept");
+    return -1;
+  }
+  return new_fd;
 }
 

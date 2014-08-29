@@ -37,6 +37,8 @@
 #define MAX_DATA_SZ 1024
 #define MAX_CONCURRENCY 4
 
+void simple_thread_handle(void *ptr);
+
 /* 
  * This is the function for handling a _single_ request.  Understand
  * what each of the steps in this function do, so that you can handle
@@ -45,31 +47,23 @@
  * you will want to probably keep all of the functions called in this
  * function, but define different code to use them.
  */
-void
-server_single_request(int accept_fd)
-{
-	int fd;
+void server_single_request(int accept_fd) {
+  int fd;
 
-	/* 
-	 * The server thread will always want to be doing the accept.
-	 * That main thread will want to hand off the new fd to the
-	 * new threads/processes/thread pool.
-	 */
-	fd = server_accept(accept_fd);
-	client_process(fd);
+  /* 
+   * The server thread will always want to be doing the accept.
+   * That main thread will want to hand off the new fd to the
+   * new threads/processes/thread pool.
+   */
+  fd = server_accept(accept_fd);
+  client_process(fd);
 
-	/* 
-	 * A loop around these two lines will result in multiple
-	 * documents being served.
-	 */
+  /* 
+   * A loop around these two lines will result in multiple
+   * documents being served.
+   */
 
-	return;
-}
-
-/* Simple Thread 8/28/2014 by chh */
-void simple_thread_handle(int new_fd) {
-    printf("new thread forked! id: %d\n", new_fd);
-    client_process(new_fd);
+  return;
 }
 
 /* 
@@ -77,18 +71,30 @@ void simple_thread_handle(int new_fd) {
  * new thread to handle each incoming requst.  Each of these worker
  * threads should process a single request and then terminate.
  */
-void
-server_simple_thread(int accept_fd)
-{
-	int fd,simple_error = 0;
-        while (!simple_error) {
-            fd = server_accept(accept_fd);
-            if (fd == 0) simple_error = 1;
-            pthread_t new_thread;
-            int r = pthread_create(&new_thread, NULL, simple_thread_handle, fd);
-            if (r) simple_error = 1;
-	}
-	return;
+void server_simple_thread(int accept_fd) {
+  int fd;
+  while (1) {
+    fd = server_accept(accept_fd);
+    if (fd == 0) return;
+    pthread_t new_thread;
+    int *para = (int *)malloc(sizeof(int));
+    *para = fd;
+    int iret = pthread_create(&new_thread, NULL, (void *)&simple_thread_handle, (void *)para);
+    free(para);
+    if (iret) return;
+  }
+  return;
+}
+
+/* 
+ * Simple Thread Used to handle each request
+ * Added in 8/28/2014 by chh 
+ */
+void simple_thread_handle(void *ptr) {
+  int new_fd = *(int *)ptr;
+  printf("new thread forked! id: %d\n", new_fd);
+  client_process(new_fd);
+  return;
 }
 
 /* 
@@ -100,55 +106,52 @@ server_simple_thread(int accept_fd)
  * variables (for a bounded structure).
  */
 
-void
-server_thread_pool_bounded(int accept_fd)
-{
-	return;
+void server_thread_pool_bounded(int accept_fd) {
+  printf("%d\n", accept_fd);
+  return;
 }
 
 typedef enum {
-	SERVER_TYPE_ONE = 0,
-	SERVER_TYPE_SIMPLE_THREAD,
-	SERVER_TYPE_THREAD_POOL_BOUND,
+  SERVER_TYPE_ONE = 0,
+  SERVER_TYPE_SIMPLE_THREAD,
+  SERVER_TYPE_THREAD_POOL_BOUND,
 } server_type_t;
 
-int
-main(int argc, char *argv[])
-{
-	server_type_t server_type;
-	short int port;
-	int accept_fd;
+int main(int argc, char *argv[]) {
+  server_type_t server_type;
+  short int port;
+  int accept_fd;
 
-	if (argc != 3) {
-		printf("Proper usage of http server is:\n%s <port> <#>\n"
-		       "port is the port to serve on, # is either\n"
-		       "0: server only a single request\n"
-		       "1: use a master thread that spawns new threads for "
-		       "each request\n"
-		       "2: use a thread pool and a _bounded_ buffer with "
-		       "mutexes + condition variables\n",
-		       argv[0]);
-		return -1;
-	}
+  if (argc != 3) {
+    printf("Proper usage of http server is:\n%s <port> <#>\n"
+           "port is the port to serve on, # is either\n"
+           "0: server only a single request\n"
+           "1: use a master thread that spawns new threads for "
+           "each request\n"
+           "2: use a thread pool and a _bounded_ buffer with "
+           "mutexes + condition variables\n",argv[0]);
+    return -1;
+  }
 
-	port = atoi(argv[1]);
-	accept_fd = server_create(port);
-	if (accept_fd < 0) return -1;
+  port = atoi(argv[1]);
+  accept_fd = server_create(port);
+  if (accept_fd < 0) return -1;
 	
-	server_type = atoi(argv[2]);
+  server_type = atoi(argv[2]);
 
-	switch(server_type) {
-	case SERVER_TYPE_ONE:
-		server_single_request(accept_fd);
-		break;
-	case SERVER_TYPE_THREAD_POOL_BOUND:
-		server_thread_pool_bounded(accept_fd);
-		break;
-	case SERVER_TYPE_SIMPLE_THREAD:
-		server_simple_thread(accept_fd);
-		break;
-	}
-	close(accept_fd);
+  switch(server_type) {
+    case SERVER_TYPE_ONE:
+      server_single_request(accept_fd);
+      break;
+    case SERVER_TYPE_THREAD_POOL_BOUND:
+      server_thread_pool_bounded(accept_fd);
+      break;
+    case SERVER_TYPE_SIMPLE_THREAD:
+      server_simple_thread(accept_fd);
+      break;
+  }
+  close(accept_fd);
 
-	return 0;
+  return 0;
 }
+
