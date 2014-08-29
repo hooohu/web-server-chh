@@ -48,22 +48,38 @@ content_get(char *path, int *content_len)
 #endif
 
 	/* Bad path?  No file?  Too large? */
+        int r_stat = stat(path, &s);
+        printf("Current Path: %s\n", path);
+        printf("stat size: %d\n", s.st_size);
 	if (sanity_check(path) || 
-	    stat(path, &s)     ||
-	    s.st_size > MAX_CONTENT_SZ) goto err;
+	    (r_stat)     ||
+	    (s.st_size > MAX_CONTENT_SZ)) {
+            printf("%d, %d, %d\n", sanity_check(path), stat(path, &s), s.st_size > MAX_CONTENT_SZ);
+            printf("sanity_check_error\n");
+            goto err;
+        }
 
 	content_fd = open(path, O_RDONLY);
-	if (content_fd < 0) goto err;
+	if (content_fd < 0) {
+            printf("content_open_error\n");
+            goto err;
+        }
 
 	resp = malloc(s.st_size);
-	if (!resp) goto err_close;
+	if (!resp) {
+            printf("rest_malloc_error\n");
+            goto err_close;
+        }
 
 	while (amnt_read < s.st_size) {
 		int ret = read(content_fd, resp + amnt_read, 
 			       s.st_size - amnt_read);
 
-		if (ret < 0) goto err_free;
-		amnt_read += ret;
+		if (ret < 0) {
+                    printf("amnt_read_error\n");
+                    goto err_free;
+		}
+                amnt_read += ret;
 	}
 	*content_len = s.st_size;
 
