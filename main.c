@@ -66,6 +66,12 @@ server_single_request(int accept_fd)
 	return;
 }
 
+/* Simple Thread 8/28/2014 by chh */
+void simple_thread_handle(int new_fd) {
+    printf("new thread forked! id: %d\n", new_fd);
+    client_process(new_fd);
+}
+
 /* 
  * This implementation uses a single master thread which then spawns a
  * new thread to handle each incoming requst.  Each of these worker
@@ -74,9 +80,16 @@ server_single_request(int accept_fd)
 void
 server_simple_thread(int accept_fd)
 {
+	int fd,simple_error = 0;
+        while (!simple_error) {
+            fd = server_accept(accept_fd);
+            if (fd == 0) simple_error = 1;
+            pthread_t new_thread;
+            int r = pthread_create(&new_thread, NULL, simple_thread_handle, fd);
+            if (r) simple_error = 1;
+	}
 	return;
 }
-
 
 /* 
  * The following implementation uses a thread pool.  This collection
