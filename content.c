@@ -22,7 +22,7 @@
 char *
 error_resp(char *path, int *len)
 {
-	const char eresponse[] = "<html><head><title>ERROR</title></head><body><font face=\"sans-serif\"><center><h1>X-P</h1><p>Could not find content at <b>%s</b>.</p></font></center></body>";
+	const char eresponse[] = "<html><head><title>ERROR</title></head><body><font face=\"sans-serif\"><center><h1>Error Occurs!</h1><p>Could not find content at <b>%s</b>.</p></font></center></body>";
 	char *resp;
 	int sz = strlen(eresponse) + strlen(path);
 	
