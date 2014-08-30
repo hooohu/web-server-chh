@@ -22,10 +22,10 @@ test0:
 
 test1:
 	./server $(PORT) 1 &
-	httperf --port=$(PORT) --server=localhost --num-conns=1000 --burst-len=100
+	httperf --port=$(PORT) --server=localhost --num-conns=10000 --burst-len=100
 	killall server
 
 test2:
 	./server $(PORT) 2 &
-	httperf --port=$(PORT) --server=localhost --num-conns=1000 --burst-len=100
+	httperf --port=$(PORT) --server=localhost --num-conns=10000 --burst-len=100
 	killall server

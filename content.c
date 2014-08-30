@@ -45,7 +45,7 @@ char *content_get(char *path, int *content_len) {
   #endif
 
   /* Bad path?  No file?  Too large? */
-  if (*path == '\0') path = init_path;
+  if (*path == '\0') path = (char *)init_path;
   if (sanity_check(path) || stat(path, &s) || (s.st_size > MAX_CONTENT_SZ)) {
     printf("%d, %d, %d\n", sanity_check(path), stat(path, &s), s.st_size > MAX_CONTENT_SZ);
     printf("sanity_check_error\n");

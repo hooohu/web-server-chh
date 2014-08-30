@@ -80,7 +80,6 @@ void server_simple_thread(int accept_fd) {
     int *para = (int *)malloc(sizeof(int));
     *para = fd;
     int iret = pthread_create(&new_thread, NULL, (void *)&simple_thread_handle, (void *)para);
-    free(para);
     if (iret) return;
   }
   return;
@@ -92,8 +91,9 @@ void server_simple_thread(int accept_fd) {
  */
 void simple_thread_handle(void *ptr) {
   int new_fd = *(int *)ptr;
-  printf("new thread forked! id: %d\n", new_fd);
+  //printf("new thread forked! id: %d\n", new_fd);
   client_process(new_fd);
+  free(ptr);
   return;
 }
 
