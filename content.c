@@ -38,16 +38,15 @@ char *content_get(char *path, int *content_len) {
   char *resp;
   int content_fd, amnt_read = 0;
   struct stat s;
+  const char init_path[] = "index.html";
 
   #ifdef THINK_TIME
   sleep(1);
   #endif
 
   /* Bad path?  No file?  Too large? */
-  int r_stat = stat(path, &s);
-  printf("Current Path: %s\n", path);
-  //printf("stat size: %d\n", s.st_size);
-  if (sanity_check(path) ||r_stat || (s.st_size > MAX_CONTENT_SZ)) {
+  if (*path == '\0') path = init_path;
+  if (sanity_check(path) || stat(path, &s) || (s.st_size > MAX_CONTENT_SZ)) {
     printf("%d, %d, %d\n", sanity_check(path), stat(path, &s), s.st_size > MAX_CONTENT_SZ);
     printf("sanity_check_error\n");
     goto err;
