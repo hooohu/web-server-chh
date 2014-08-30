@@ -4,6 +4,7 @@ CFLAGS=-g -I. -Wall -Wextra -pthread
 BIN=server
 CC=gcc
 PORT=8080
+NUM=10000
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(DEFINES) -o $@ -c $<
@@ -15,6 +16,7 @@ clean:
 	rm $(BIN) $(OBJS)
 
 # Use 'make testX PORT=XXXX' when the address is used.
+# USE 'NUM = XX' change default times. 08/30/2014 
 test0:
 	./server $(PORT) 0 &
 	httperf --port=$(PORT) --server=localhost --num-conns=1
@@ -22,10 +24,11 @@ test0:
 
 test1:
 	./server $(PORT) 1 &
-	httperf --port=$(PORT) --server=localhost --num-conns=10000 --burst-len=100
+	httperf --port=$(PORT) --server=localhost --num-conns=$(NUM) --burst-len=100
 	killall server
 
 test2:
 	./server $(PORT) 2 &
-	httperf --port=$(PORT) --server=localhost --num-conns=10000 --burst-len=100
+	httperf --port=$(PORT) --server=localhost --num-conns=$(NUM) --burst-len=100
 	killall server
+

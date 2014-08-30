@@ -136,7 +136,7 @@ void pool_thread_handle(void *ptr) {
     
     if (the_fd != -1) client_process(the_fd);
 
-    sleep(1);
+    //sleep(1);
   }
 }
 
