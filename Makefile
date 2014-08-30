@@ -14,6 +14,7 @@ $(BIN): $(OBJS)
 clean:
 	rm $(BIN) $(OBJS)
 
+# Use 'make testX PORT=XXXX' when the address is used.
 test0:
 	./server $(PORT) 0 &
 	httperf --port=$(PORT) --server=localhost --num-conns=1
