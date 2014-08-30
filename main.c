@@ -37,8 +37,6 @@
 #define MAX_DATA_SZ 1024
 #define MAX_CONCURRENCY 4
 
-void simple_thread_handle(void *ptr);
-
 /* 
  * This is the function for handling a _single_ request.  Understand
  * what each of the steps in this function do, so that you can handle
@@ -67,6 +65,18 @@ void server_single_request(int accept_fd) {
 }
 
 /* 
+ * Simple Thread Used to handle each request
+ * Added in 8/28/2014 by chh 
+ */
+void simple_thread_handle(void *ptr) {
+  int new_fd = *(int *)ptr;
+  //printf("new thread forked! id: %d\n", new_fd);
+  client_process(new_fd);
+  free(ptr);
+  return;
+}
+
+/* 
  * This implementation uses a single master thread which then spawns a
  * new thread to handle each incoming requst.  Each of these worker
  * threads should process a single request and then terminate.
@@ -85,16 +95,49 @@ void server_simple_thread(int accept_fd) {
   return;
 }
 
-/* 
- * Simple Thread Used to handle each request
- * Added in 8/28/2014 by chh 
+/*
+ * Struct for the list.
  */
-void simple_thread_handle(void *ptr) {
-  int new_fd = *(int *)ptr;
-  //printf("new thread forked! id: %d\n", new_fd);
-  client_process(new_fd);
-  free(ptr);
-  return;
+struct pool_node {
+  int pool_fd;
+  struct pool_node* next;
+};
+
+/*
+ *This data structure is used in pthread_creat for multiply parameters of thread function.
+ */
+struct pool_data {
+  struct pool_node * head;
+  pthread_mutex_t share;
+};
+
+/*
+ * This is the thread that handle the List Data Structure
+ * The main fork handle all the requests
+ * This fork read fd from the List and manage and initial mutex array
+ * Then it will generate handle threads with mutex
+ */
+void pool_thread_handle(void *ptr) {
+  struct pool_data *pass = (struct pool_data *)ptr;  
+  int the_fd;
+
+  while(1) {
+    pthread_mutex_lock(&(pass->share));
+
+    if (pass->head != NULL) {
+      the_fd = pass->head->pool_fd;
+      struct pool_node *temp = pass->head;
+      pass->head = pass->head->next;
+      free(temp);
+    }
+    else the_fd = -1;
+
+    pthread_mutex_unlock(&(pass->share));
+    
+    if (the_fd != -1) client_process(the_fd);
+
+    sleep(1);
+  }
 }
 
 /* 
@@ -105,9 +148,38 @@ void simple_thread_handle(void *ptr) {
  * this shared data-structure is done using mutexes + condition
  * variables (for a bounded structure).
  */
-
 void server_thread_pool_bounded(int accept_fd) {
-  printf("%d\n", accept_fd);
+  pthread_t threads[MAX_CONCURRENCY];
+  int fd;
+  struct pool_node *tail = NULL;
+  struct pool_data pool_pass;
+  int i;
+  
+  pool_pass.head = NULL;
+//  pool_pass.share = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_init(&(pool_pass.share), NULL);  
+
+  pthread_mutex_lock(&(pool_pass.share));
+
+  for (i = 0; i < MAX_CONCURRENCY; i++) {
+    pthread_create(&(threads[i]), NULL, (void *)&pool_thread_handle, (void*)&pool_pass);
+  }
+
+  pthread_mutex_unlock(&(pool_pass.share));
+
+  while(1) {
+    fd = server_accept(accept_fd);
+    if (fd == 0) return;
+    struct pool_node *new_node = (struct pool_node *)malloc(sizeof(struct pool_node));
+    new_node->pool_fd = fd;
+    new_node->next = NULL;
+    if (pool_pass.head == NULL) pool_pass.head = tail = new_node;
+    else {
+      tail->next = new_node;
+      tail = new_node;
+    }
+  }
+ 
   return;
 }
 
