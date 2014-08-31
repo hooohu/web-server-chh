@@ -9,6 +9,12 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-void client_process(int fd);
+struct last_data {
+  char *last_path;
+  char *last_response;
+  pthread_mutex_t last_lock;
+};
+
+void client_process(int fd, struct last_data *para);
 
 #endif

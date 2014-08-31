@@ -47,14 +47,17 @@
  */
 void server_single_request(int accept_fd) {
   int fd;
+  struct last_data temp;
 
+  temp.last_path = NULL;
+  temp.last_response = NULL;
   /* 
    * The server thread will always want to be doing the accept.
    * That main thread will want to hand off the new fd to the
    * new threads/processes/thread pool.
    */
   fd = server_accept(accept_fd);
-  client_process(fd);
+  client_process(fd, &temp);
 
   /* 
    * A loop around these two lines will result in multiple
@@ -64,14 +67,25 @@ void server_single_request(int accept_fd) {
   return;
 }
 
+/*
+ * This is a data struct used for para in simple thread part
+ * It contains a fd flag
+ * And a last_data cache file pointer
+ */
+struct simple_data {
+  int simple_fd;
+  struct last_data *simple_cache;
+};
+
 /* 
  * Simple Thread Used to handle each request
  * Added in 8/28/2014 by chh 
  */
 void simple_thread_handle(void *ptr) {
-  int new_fd = *(int *)ptr;
+  struct simple_data *data = (struct simple_data *)ptr;
+
   //printf("new thread forked! id: %d\n", new_fd);
-  client_process(new_fd);
+  client_process(data->simple_fd, data->simple_cache);
   free(ptr);
   return;
 }
@@ -83,12 +97,19 @@ void simple_thread_handle(void *ptr) {
  */
 void server_simple_thread(int accept_fd) {
   int fd;
+  struct last_data cache_data;
+
+  pthread_mutex_init(&(cache_data.last_lock), NULL);
+  cache_data.last_response = NULL;
+  cache_data.last_path = NULL;
+
   while (1) {
     fd = server_accept(accept_fd);
     if (fd == 0) return;
     pthread_t new_thread;
-    int *para = (int *)malloc(sizeof(int));
-    *para = fd;
+    struct simple_data *para = (struct simple_data *)malloc(sizeof(struct simple_data));
+    para->simple_fd = fd;
+    para->simple_cache = &(cache_data);
     int iret = pthread_create(&new_thread, NULL, (void *)&simple_thread_handle, (void *)para);
     if (iret) return;
   }
@@ -100,15 +121,16 @@ void server_simple_thread(int accept_fd) {
  */
 struct pool_node {
   int pool_fd;
-  struct pool_node* next;
+  struct pool_node *next;
 };
 
 /*
  *This data structure is used in pthread_creat for multiply parameters of thread function.
  */
 struct pool_data {
-  struct pool_node * head;
+  struct pool_node *head;
   pthread_mutex_t share;
+  struct last_data pool_cache;
 };
 
 /*
@@ -134,7 +156,7 @@ void pool_thread_handle(void *ptr) {
 
     pthread_mutex_unlock(&(pass->share));
     
-    if (the_fd != -1) client_process(the_fd);
+    if (the_fd != -1) client_process(the_fd, &(pass->pool_cache));
 
     //sleep(1);
   }
@@ -157,12 +179,15 @@ void server_thread_pool_bounded(int accept_fd) {
   
   pool_pass.head = NULL;
 //  pool_pass.share = PTHREAD_MUTEX_INITIALIZER;
-  pthread_mutex_init(&(pool_pass.share), NULL);  
+  pthread_mutex_init(&(pool_pass.share), NULL);
+  pthread_mutex_init(&(pool_pass.pool_cache.last_lock), NULL);  
+  pool_pass.pool_cache.last_path = NULL;
+  pool_pass.pool_cache.last_response = NULL;
 
   pthread_mutex_lock(&(pool_pass.share));
 
   for (i = 0; i < MAX_CONCURRENCY; i++) {
-    pthread_create(&(threads[i]), NULL, (void *)&pool_thread_handle, (void*)&pool_pass);
+    pthread_create(&(threads[i]), NULL, (void *)&pool_thread_handle, (void *)&pool_pass);
   }
 
   pthread_mutex_unlock(&(pool_pass.share));

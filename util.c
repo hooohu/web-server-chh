@@ -10,10 +10,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
+#include <pthread.h>
+#include <string.h>
 
 #include <server.h>
 #include <simple_http.h>
 #include <content.h>
+#include <util.h>
 
 /* 
  * newfd_create_req and respond_and_free_req functions are there to
@@ -113,7 +116,7 @@ done:
 /* 
  * Process a client request on a newly opened file descriptor.
  */
-void client_process(int fd) {
+void client_process(int fd, struct last_data *para) {
   struct http_req *r;
   char *response;
   int len;
@@ -131,7 +134,23 @@ void client_process(int fd) {
   assert(r);
   assert(r->path);
 
-  response = content_get(r->path, &len);
+  pthread_mutex_lock(&(para->last_lock));
+
+  if (para->last_path != NULL && strcmp(para->last_path, r->path) == 0)
+    response = para->last_response;
+  else {
+    pthread_mutex_unlock(&(para->last_lock));
+
+    response = content_get(r->path, &len);
+
+    pthread_mutex_lock(&(para->last_lock));
+
+    para->last_path = r->path;
+    para->last_response = response;
+  } 
+
+  pthread_mutex_unlock(&(para->last_lock));
+
   if (!response) {
     shttp_free_req(r);
     return;
