@@ -51,6 +51,7 @@ void server_single_request(int accept_fd) {
 
   temp.last_path = NULL;
   temp.last_response = NULL;
+  temp.resp_len = 0;
   /* 
    * The server thread will always want to be doing the accept.
    * That main thread will want to hand off the new fd to the
@@ -102,6 +103,7 @@ void server_simple_thread(int accept_fd) {
   pthread_mutex_init(&(cache_data.last_lock), NULL);
   cache_data.last_response = NULL;
   cache_data.last_path = NULL;
+  cache_data.resp_len = 0;
 
   while (1) {
     fd = server_accept(accept_fd);
@@ -183,6 +185,7 @@ void server_thread_pool_bounded(int accept_fd) {
   pthread_mutex_init(&(pool_pass.pool_cache.last_lock), NULL);  
   pool_pass.pool_cache.last_path = NULL;
   pool_pass.pool_cache.last_response = NULL;
+  pool_pass.pool_cache.resp_len = 0;
 
   pthread_mutex_lock(&(pool_pass.share));
 

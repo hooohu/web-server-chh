@@ -136,8 +136,11 @@ void client_process(int fd, struct last_data *para) {
 
   pthread_mutex_lock(&(para->last_lock));
 
-  if (para->last_path != NULL && strcmp(para->last_path, r->path) == 0)
-    response = para->last_response;
+  if (para->last_path != NULL && strcmp(para->last_path, r->path) == 0) {
+    response = (char *)malloc(sizeof(char) * para->resp_len);
+    strncpy(response, para->last_response, para->resp_len);
+    len = para->resp_len;
+  }
   else {
     pthread_mutex_unlock(&(para->last_lock));
 
@@ -145,8 +148,14 @@ void client_process(int fd, struct last_data *para) {
 
     pthread_mutex_lock(&(para->last_lock));
 
-    para->last_path = r->path;
-    para->last_response = response;
+    if (para->last_path != NULL) free(para->last_path);
+    if (para->last_response != NULL) free(para->last_response);
+    int path_len = strlen(r->path);
+    para->last_path = (char *)malloc(sizeof(char) * path_len);
+    strncpy(para->last_path, r->path, path_len);
+    para->last_response = (char *)malloc(sizeof(char) * len);
+    strncpy(para->last_response, response, len);
+    para->resp_len = len;
   } 
 
   pthread_mutex_unlock(&(para->last_lock));

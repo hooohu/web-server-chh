@@ -12,6 +12,7 @@
 struct last_data {
   char *last_path;
   char *last_response;
+  int resp_len;
   pthread_mutex_t last_lock;
 };
 
