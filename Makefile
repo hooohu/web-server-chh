@@ -5,6 +5,7 @@ BIN=server
 CC=gcc
 PORT=8080
 NUM=10000
+SERVER=127.0.0.1
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(DEFINES) -o $@ -c $<
@@ -31,4 +32,7 @@ test2:
 	./server $(PORT) 2 &
 	httperf --port=$(PORT) --server=localhost --num-conns=$(NUM) --burst-len=100
 	killall server
+
+remote:
+	httperf --port=$(PORT) --server=$(SERVER) --num-conns=$(NUM) --burst-len=100
 

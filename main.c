@@ -35,7 +35,7 @@
 #include <server.h>		/* server_accept and server_create */
 
 #define MAX_DATA_SZ 1024
-#define MAX_CONCURRENCY 4
+#define MAX_CONCURRENCY 16
 
 /* 
  * This is the function for handling a _single_ request.  Understand
