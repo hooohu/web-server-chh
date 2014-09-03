@@ -35,7 +35,7 @@
 #include <server.h>		/* server_accept and server_create */
 
 #define MAX_DATA_SZ 1024
-#define MAX_CONCURRENCY 16
+#define MAX_CONCURRENCY 4
 
 /* 
  * This is the function for handling a _single_ request.  Understand
@@ -132,6 +132,7 @@ struct pool_node {
 struct pool_data {
   struct pool_node *head;
   pthread_mutex_t share;
+  pthread_cond_t sig_cond;
   struct last_data pool_cache;
 };
 
@@ -160,7 +161,9 @@ void pool_thread_handle(void *ptr) {
     
     if (the_fd != -1) client_process(the_fd, &(pass->pool_cache));
 
-    //sleep(1);
+    pthread_mutex_lock(&(pass->share));
+    pthread_cond_wait(&(pass->sig_cond), &(pass->share));
+    pthread_mutex_unlock(&(pass->share));
   }
 }
 
@@ -182,6 +185,7 @@ void server_thread_pool_bounded(int accept_fd) {
   pool_pass.head = NULL;
 //  pool_pass.share = PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_init(&(pool_pass.share), NULL);
+  pthread_cond_init(&(pool_pass.sig_cond), NULL);
   pthread_mutex_init(&(pool_pass.pool_cache.last_lock), NULL);  
   pool_pass.pool_cache.last_path = NULL;
   pool_pass.pool_cache.last_response = NULL;
@@ -206,6 +210,9 @@ void server_thread_pool_bounded(int accept_fd) {
       tail->next = new_node;
       tail = new_node;
     }
+    pthread_mutex_lock(&(pool_pass.share));
+    pthread_cond_signal(&(pool_pass.sig_cond));
+    pthread_mutex_unlock(&(pool_pass.share));
   }
  
   return;
