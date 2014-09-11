@@ -146,9 +146,8 @@ void pool_thread_handle(void *ptr) {
   struct pool_data *pass = (struct pool_data *)ptr;  
   int the_fd;
 
+  pthread_mutex_lock(&(pass->share));
   while(1) {
-    pthread_mutex_lock(&(pass->share));
-
     if (pass->head != NULL) {
       the_fd = pass->head->pool_fd;
       struct pool_node *temp = pass->head;
@@ -163,7 +162,6 @@ void pool_thread_handle(void *ptr) {
 
     pthread_mutex_lock(&(pass->share));
     pthread_cond_wait(&(pass->sig_cond), &(pass->share));
-    pthread_mutex_unlock(&(pass->share));
   }
 }
 
@@ -205,12 +203,12 @@ void server_thread_pool_bounded(int accept_fd) {
     struct pool_node *new_node = (struct pool_node *)malloc(sizeof(struct pool_node));
     new_node->pool_fd = fd;
     new_node->next = NULL;
+    pthread_mutex_lock(&(pool_pass.share));
     if (pool_pass.head == NULL) pool_pass.head = tail = new_node;
     else {
       tail->next = new_node;
       tail = new_node;
     }
-    pthread_mutex_lock(&(pool_pass.share));
     pthread_cond_signal(&(pool_pass.sig_cond));
     pthread_mutex_unlock(&(pool_pass.share));
   }
